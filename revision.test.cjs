@@ -4,8 +4,8 @@ const {createService,restore,serialize}=require('./src/service.cjs');
 const {MemoryStore}=require('./src/store.cjs');
 const fresh=()=>new Game([0,1,2,3].map(i=>({uid:'u'+i,name:'양반'+i,team:i%2,character:i,ai:false})),()=>.01);
 let g=fresh();assert.equal(NODES.find(n=>n.id==='NW1').name,'공주');
-for(const [buildings,mult] of [[[],1],[[1],2],[[2],3],[[3],5],[[1,2],5],[[1,3],7],[[2,3],8],[[1,2,3],10]]){g.s.land.O1.buildings=buildings;assert.equal(g.toll('O1'),25*mult);g.s.land.O1.boost=true;assert.equal(g.toll('O1'),50*mult);g.s.land.O1.boost=false;}
-console.log('PASS 공주 명칭·모든 건물 조합 합산 통행료·축제 배수');
+for(const [buildings,mult] of [[[],1],[[1],2],[[2],3],[[3],5],[[1,2],5],[[1,3],7],[[2,3],8],[[1,2,3],10]]){g.s.land.O1.buildings=buildings;assert.equal(g.toll('O1'),20*mult);g.s.land.O1.boost=true;assert.equal(g.toll('O1'),40*mult);g.s.land.O1.boost=false;}
+for(const n of NODES.filter(n=>n.type==='property')){assert.equal(n.base,Math.floor(n.price*.2));for(const tier of [1,2,3])assert.equal(g.buildCost(n.id,tier),Math.floor(n.price*tier*.2));g.s.land[n.id].buildings=[1,2,3];assert.equal(g.toll(n.id),n.base*10);}console.log('PASS 공주 명칭·모든 건물 조합 합산 통행료·축제 배수');
 for(const cash of [19,20,25,95,100,500]){g=fresh();g.p.pos='SW1';g.p.cash=cash;g.arrive();if(cash<20){assert.equal(g.s.phase,'notice');continue;}assert.equal(g.s.choice.min,20);assert.equal(g.s.choice.max,Math.min(100,Math.floor(cash/10)*10));assert.equal(g.action('choose',25),false);assert.equal(g.action('choose',110),false);assert(g.action('choose',20));}
 console.log('PASS 판돈20~100·10단위·현금부족·변조 요청 거절');
 g=fresh();g.s.land.O1.owner=0;g.s.land.O2.owner=2;g.s.land.O4.owner=0;g.p.pos='O5';g.p.cash=270;g.s.arrived=true;g.s.phase='manage';assert.deepEqual(g.ai(),['buy']);g.action(...g.ai());assert.equal(g.s.winner.team,0);
