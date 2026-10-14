@@ -4,16 +4,16 @@ const {Lobby}=require('./src/lobby.cjs');
 const fresh=()=>new Game([0,1,2,3].map(id=>({name:'양반'+id,team:id%2,character:id,ai:false})),()=>.01);
 function group(weights,masks){return masks.reduce((sum,i)=>sum+weights[i],0);}
 const g=fresh();
-for(const power of [0,8,30,31,50,69,70,100,NaN,Infinity]){
+for(const power of [0,8,20,21,50,79,80,100,NaN,Infinity]){
  const weights=g.throwWeights(power);assert(weights.every(w=>w>0));assert(Math.abs(weights.reduce((a,b)=>a+b,0)-1)<1e-12);
- if(power<=30)assert(Math.abs(group(weights,[1,2,4,8])-.28)<1e-12);
- else if(power>=70&&Number.isFinite(power))assert(Math.abs(group(weights,[0,15])-.155)<1e-12);
+ if(power<=20)assert(Math.abs(group(weights,[1,2,4,8])-.33)<1e-12);
+ else if(power>=80&&Number.isFinite(power))assert(Math.abs(group(weights,[0,15])-.205)<1e-12);
  else assert(weights.every(w=>w===1/16));
- if(power===30||power===70){let sum=0;for(let mask=0;mask<16;mask++){g.random=()=>sum+weights[mask]/2;assert.deepEqual(g.toss(power),result(Array.from({length:4},(_,i)=>Boolean(mask&(1<<i)))));sum+=weights[mask];}}
+ if(power===20||power===80){let sum=0;for(let mask=0;mask<16;mask++){g.random=()=>sum+weights[mask]/2;assert.deepEqual(g.toss(power),result(Array.from({length:4},(_,i)=>Boolean(mask&(1<<i)))));sum+=weights[mask];}}
 }
-console.log('PASS 파워 구간 경계·정확한 합산 +3%p·모든 윷 결과와 표시 일치');
+console.log('PASS 파워 구간 경계·정확한 합산 +8%p·모든 윷 결과와 표시 일치');
 let seed=987654321;g.random=()=>{seed=(Math.imul(seed,1664525)+1013904223)>>>0;return seed/4294967296;};
-for(const [power,target,expected] of [[100,[4,5],.155],[8,[1,-1],.28],[50,[4,5],.125]]){let hit=0;const n=100000;for(let i=0;i<n;i++)if(target.includes(g.toss(power).value))hit++;assert(Math.abs(hit/n-expected)<.004);console.log('PASS 파워 '+power+'% 10만 회 실제 던지기 '+(hit/n*100).toFixed(2)+'%');}
+for(const [power,target,expected] of [[100,[4,5],.205],[8,[1,-1],.33],[50,[4,5],.125]]){let hit=0;const n=100000;for(let i=0;i<n;i++)if(target.includes(g.toss(power).value))hit++;assert(Math.abs(hit/n-expected)<.004);console.log('PASS 파워 '+power+'% 10만 회 실제 던지기 '+(hit/n*100).toFixed(2)+'%');}
 const ranks=fresh();ranks.s.land.O1.owner=0;ranks.s.land.O1.buildings=[1,3];ranks.s.land.O1.level=3;ranks.s.players[0].pawnDebt=1000;assert.equal(ranks.grossAssets(ranks.s.players[0]),1680);assert.equal(ranks.assets(ranks.s.players[0]),680);assert.equal(ranks.rank(ranks.s.players[0]),1);assert.equal(ranks.rank(ranks.s.players[1]),2);assert.equal(ranks.rank(ranks.s.players[2]),2);ranks.s.players[1].cash=1700;assert.equal(ranks.rank(ranks.s.players[0]),2);console.log('PASS 총자산 순위·공동 순위·개인 현금과 순자산 평가 구분');
 const festival=fresh();festival.s.land.O1.owner=0;festival.s.land.O2.owner=2;festival.s.land.O4.owner=1;
 for(const [turn,target] of [[0,'O1'],[1,'O4'],[2,'O2']]){festival.s.turn=turn;festival.p.pos='O10';festival.s.rolls=[];festival.arrive();assert(festival.action('choose',target));assert.deepEqual(Object.keys(festival.s.land).filter(id=>festival.s.land[id].boost),[target]);}console.log('PASS 같은 팀·상대 팀 재지정 모두 이전 장원급제 효과 해제');

@@ -10,7 +10,7 @@ function createService({store,now=Date.now,random=Math.random}={}){
    lobby.pruneSessions();
    lobby.tick();const afterTick=serialize(lobby);let result,failure;
    try{
-   if(route==='login'&&method==='POST'){if(lobby.users.size>=2000)throw Object.assign(Error('접속자가 많습니다. 잠시 후 다시 시도해주세요.'),{status:503});result=lobby.login(body.nickname);}
+   if(route==='login'&&method==='POST'){if(lobby.users.size>=2000)throw Object.assign(Error('접속자가 많습니다. 잠시 후 다시 시도해주세요.'),{status:503});result=lobby.login(body.nickname,body.deviceSecret);}
    else{
     const previous=lobby.users.get(token)?.seen,u=lobby.user(token);
     if(route==='state'&&method==='GET'){
