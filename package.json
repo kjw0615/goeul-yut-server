@@ -1,0 +1,15 @@
+{
+  "name": "goeul-yut-server",
+  "version": "0.14.0",
+  "private": true,
+  "type": "commonjs",
+  "scripts": {
+    "dev": "node dev.cjs",
+    "start": "node dev.cjs",
+    "build": "node validate.cjs",
+    "test": "node rules.test.cjs && node serverless.test.cjs"
+  },
+  "engines": {
+    "node": "22.x"
+  }
+}

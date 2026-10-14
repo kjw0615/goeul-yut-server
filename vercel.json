@@ -1,0 +1,11 @@
+{
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "framework": null,
+  "buildCommand": "npm run build",
+  "outputDirectory": "public",
+  "functions": { "api/game.js": { "maxDuration": 30 } },
+  "rewrites": [
+    { "source": "/health", "destination": "/api/game?route=health" },
+    { "source": "/api/:route(login|state|create|join|quick|leave|edit|ready|ai|ai-edit|kick|rematch|logout|start|action)", "destination": "/api/game?route=:route" }
+  ]
+}

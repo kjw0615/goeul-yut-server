@@ -1,0 +1,32 @@
+const assert=require('node:assert/strict'),http=require('node:http');
+const {RedisStore,fromEnvironment}=require('./src/store.cjs'),{createHandler}=require('./src/http.cjs'),{restore,serialize}=require('./src/service.cjs');
+(async()=>{
+ let time=1000;const values=new Map();let commands=0;
+ const fetcher=async(url,options)=>{assert.equal(url,'https://redis.example.test');assert.equal(options.headers.Authorization,'Bearer test-only-placeholder');const c=JSON.parse(options.body);commands++;let result;if(c[0]==='GET')result=values.get(c[1])??null;else{assert.equal(c[0],'EVAL');assert.equal(c[2],1);const current=values.get(c[3])??null,expected=c[4]==='__missing__'?null:c[4];result=current===expected?1:0;if(result)values.set(c[3],c[5]);}return {ok:true,json:async()=>({result})};};
+ const env={VERCEL:'1',ALLOWED_ORIGINS:'https://web.example.test',UPSTASH_REDIS_REST_URL:'https://redis.example.test',UPSTASH_REDIS_REST_TOKEN:'test-only-placeholder'};
+ // Every request creates a new Redis adapter and a new Lobby, as separate cold Functions would.
+ const server=http.createServer(createHandler({env,now:()=>time,random:()=>.01,getStore:()=>new RedisStore({url:env.UPSTASH_REDIS_REST_URL,token:env.UPSTASH_REDIS_REST_TOKEN,fetcher})}));
+ await new Promise(resolve=>server.listen(0,'127.0.0.1',resolve));const base='http://127.0.0.1:'+server.address().port;
+ async function call(route,body,token,extra={}){const r=await fetch(base+'/api/'+route,{method:body===undefined?'GET':'POST',headers:{...(body===undefined?{}:{'Content-Type':'application/json'}),...(token?{Authorization:'Bearer '+token}:{}),...extra},body:body===undefined?undefined:JSON.stringify(body)});return {status:r.status,data:await r.json()};}
+ const mutate=fn=>{const key='goeul-yut:v14:lobby',l=restore(values.get(key),()=>time,()=>.01);fn(l);values.set(key,serialize(l));};
+ try{
+  assert.throws(()=>fromEnvironment({VERCEL:'1'}));assert.throws(()=>new RedisStore({url:'http://bad.example',token:'x'}));
+  const users=await Promise.all(Array.from({length:8},(_,i)=>call('login',{nickname:'서버리스 '+i})));assert(users.every(x=>x.status===200));assert.equal(new Set(users.map(x=>x.data.token)).size,8);console.log('PASS 동시 로그인·CAS 충돌 재시도·서로 다른 Function 상태 공유');
+  const tokens=users.map(x=>x.data.token);assert.equal((await call('state')).status,401);assert.equal((await call('state',undefined,tokens[0],{Origin:'https://foreign.example'})).status,403);
+  const cors=await fetch(base+'/api/state',{method:'OPTIONS',headers:{Origin:env.ALLOWED_ORIGINS}});assert.equal(cors.status,204);assert.equal(cors.headers.get('access-control-allow-origin'),env.ALLOWED_ORIGINS);
+  assert.equal((await call('login',{nickname:'x'.repeat(17000)})).status,413);console.log('PASS 서버 CORS·인증·요청 크기 제한·배포 저장소 누락 시 차단');
+  const room=(await call('create',{name:'서버리스 경기'},tokens[0])).data.room;for(let i=1;i<4;i++)assert.equal((await call('join',{id:room.id},tokens[i])).status,200);
+  const ready=await Promise.all(tokens.slice(0,4).map(t=>call('ready',{ready:true},t)));assert(ready.every(x=>x.status===200));assert.equal((await call('start',{},tokens[0])).status,200);
+  const a=await call('state',undefined,tokens[0]),b=await call('state',undefined,tokens[1]);assert.deepEqual(a.data.room.state,b.data.room.state);assert(!JSON.stringify(a.data).includes(tokens[1]));console.log('PASS 네 사용자 준비·시작·공유 상태·타인 토큰 미노출');
+  const roll={type:'roll',requestId:'01234567-89ab-cdef-0123-456789abcdef'};assert.equal((await call('action',roll,tokens[0])).status,200);assert.equal((await call('action',roll,tokens[0])).status,200);assert.equal((await call('state',undefined,tokens[0])).data.room.state.rolls.length,2);console.log('PASS 같은 행동 요청 재전송 시 중복 실행 방지');
+  mutate(l=>{const r=l.rooms.get(room.id),g=r.game;g.s.phase='manage';g.s.arrived=true;g.s.rolls=[];g.p.pos='O1';g.p.cash=1000;r.deadline=time+30000;r.endAt=0;});
+  const buys=await Promise.all([call('action',{type:'buy',requestId:'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa'},tokens[0]),call('action',{type:'buy',requestId:'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb'},tokens[0])]);assert.deepEqual(buys.map(x=>x.status).sort(),[200,400]);const bought=(await call('state',undefined,tokens[0])).data.room.state;assert.equal(bought.players[0].cash,900);assert.equal(bought.land.O1.owner,0);console.log('PASS 동시 매입 한 번만 차감·소유권 원자적 처리');
+  mutate(l=>{const r=l.rooms.get(room.id),g=r.game;g.s.phase='roll';g.s.arrived=false;g.s.rolls=[];r.endAt=0;r.auto=false;r.deadline=time+30000;r.nextAuto=0;});time+=30001;
+  assert.equal((await call('action',{type:'setCash',value:999},tokens[0])).status,400);assert.equal((await call('state',undefined,tokens[0])).data.room.state.rolls.length,2);console.log('PASS 30초 만료 자동 윷·거절된 요청에서도 서버 시간 진행 보존');
+  mutate(l=>{const r=l.rooms.get(room.id),g=r.game;g.s.phase='manage';g.s.arrived=true;g.s.rolls=[];r.endAt=0;r.auto=false;r.deadline=time+30000;});const before=(await call('state',undefined,tokens[0])).data.room.state.turnCount;time+=3001;assert.equal((await call('state',undefined,tokens[0])).data.room.state.turnCount,before+1);console.log('PASS 상시 타이머 없이 저장한 기한으로 3초 차례 종료');
+  assert.equal((await call('join',{id:room.id},tokens[4])).status,200);assert((await call('state',undefined,tokens[4])).data.room.spectator);assert.equal((await call('action',{type:'roll'},tokens[4])).status,400);for(let i=0;i<4;i++)await call('leave',{},tokens[i]);assert.equal((await call('state',undefined,tokens[4])).data.room,null);console.log('PASS 관전 조작 차단·마지막 참가자 퇴장 시 방 삭제');
+  const handler=createHandler({env,now:()=>time,getStore:()=>new RedisStore({url:env.UPSTASH_REDIS_REST_URL,token:env.UPSTASH_REDIS_REST_TOKEN,fetcher})});let parsedStatus,parsedResult;
+  await handler({method:'POST',url:'/api/game',query:{route:'login'},body:{nickname:'Vercel 경로 검증'},headers:{host:'api.example.test'}},{setHeader(){},writeHead(status){parsedStatus=status;},end(text){parsedResult=JSON.parse(text);}});assert.equal(parsedStatus,200);assert(parsedResult.token);console.log('PASS Vercel rewrite query·미리 파싱된 요청 본문 처리');
+  assert(commands>0);console.log('서버리스·Redis REST 호환 검증 완료 (실제 Redis 계정은 연결하지 않음)');
+ }finally{await new Promise(resolve=>server.close(resolve));}
+})().catch(error=>{console.error(error);process.exitCode=1;});
