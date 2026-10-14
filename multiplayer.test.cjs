@@ -1,7 +1,9 @@
+// These existing fixtures isolate non-nak rules; nak probabilities are tested separately.
+require('./src/engine.cjs').Game.nakChance=0;
 const assert=require('node:assert/strict');const {Lobby}=require('./src/lobby.cjs');const {Game,NODES}=require('./src/engine.cjs');
 let count=0;const test=(n,fn)=>{fn();count++;console.log('PASS '+n)};
 function fixture(){let time=1000;const l=new Lobby({startDelayMs:0,now:()=>time,random:()=>.01});const users=[0,1,2,3].map(i=>l.user(l.login('양반'+i).token));l.create(users[0]);const r=l.room(users[0]);for(const u of users.slice(1))l.join(u,{id:r.id});return {l,r,users,tick(ms){time+=ms;for(const u of users)u.seen=time;l.tick();},now:()=>time};}
-function ready(f){f.users.forEach(u=>f.l.ready(u,{ready:true}));f.l.start(f.users[0]);return f.r.game;}
+function ready(f){f.users.forEach(u=>f.l.ready(u,{ready:true}));f.l.start(f.users[0]);f.r.game.toss=()=>({name:'윷',value:4,bits:[true,true,true,true]});return f.r.game;}
 function fresh(){return new Game([0,1,2,3].map(id=>({uid:'u'+id,name:'양반'+id,team:id%2,character:id,ai:true})),()=>.01);}
 function own(g,id,p,buildings=[]){g.s.land[id]={owner:p,buildings:[...buildings],level:Math.max(0,...buildings),boost:false};}
 test('최종 고을20개 이름·가격 전체 일치',()=>{const expected={O1:['김제',100],O2:['안동',100],O4:['강경',100],O5:['평양',270],O6:['수원',150],O7:['광주',150],O9:['송도',150],O11:['강릉',180],O12:['춘천',180],O14:['청주',180],O15:['전주',270],O16:['동래',200],O17:['진주',200],O19:['제주',240],NE1:['의주',200],NW1:['공주',200],NW2:['남한산성',200],SW2:['강화',200],SE1:['영종진',270],SE2:['한성부',300]};for(const [id,[name,price]] of Object.entries(expected)){const n=NODES.find(n=>n.id===id);assert.equal(n.name,name);assert.equal(n.price,price);}});

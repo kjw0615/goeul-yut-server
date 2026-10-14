@@ -1,3 +1,5 @@
+// These existing fixtures isolate non-nak rules; nak probabilities are tested separately.
+require('./src/engine.cjs').Game.nakChance=0;
 const assert=require('node:assert/strict'),http=require('node:http');
 const {RedisStore,fromEnvironment}=require('./src/store.cjs'),{createHandler}=require('./src/http.cjs'),{restore,serialize}=require('./src/service.cjs');
 (async()=>{

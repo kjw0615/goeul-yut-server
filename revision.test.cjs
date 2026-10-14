@@ -1,3 +1,5 @@
+// These existing fixtures isolate non-nak rules; nak probabilities are tested separately.
+require('./src/engine.cjs').Game.nakChance=0;
 const assert=require('node:assert/strict');
 const {Game,NODES}=require('./src/engine.cjs');
 const {createService,restore,serialize}=require('./src/service.cjs');

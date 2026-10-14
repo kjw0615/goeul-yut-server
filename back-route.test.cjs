@@ -1,3 +1,5 @@
+// These existing fixtures isolate non-nak rules; nak probabilities are tested separately.
+require('./src/engine.cjs').Game.nakChance=0;
 const assert=require('node:assert/strict'),{Game}=require('./src/engine.cjs');
 const fresh=()=>new Game([0,1,2,3].map(i=>({name:'양반'+i,team:i%2,character:i,ai:false})),()=>.01);
 for(const [at,trace,choices] of [['C',['O5','NE1','NE2'],['NE2','NW2']],['O15',['O12','O13','O14'],['O14','SW2']],['O0',['O17','O18','O19'],['O19','SE2']]]){
