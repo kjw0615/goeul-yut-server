@@ -7,7 +7,7 @@
     "dev": "node dev.cjs",
     "start": "node dev.cjs",
     "build": "node validate.cjs",
-    "test": "node rules.test.cjs && node features.test.cjs && node session.test.cjs && node serverless.test.cjs"
+    "test": "node rules.test.cjs && node features.test.cjs && node session.test.cjs && node social.test.cjs && node serverless.test.cjs"
   },
   "engines": {
     "node": "22.x"
