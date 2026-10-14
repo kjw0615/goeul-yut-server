@@ -1,6 +1,6 @@
 const assert=require('node:assert/strict');const {Lobby}=require('./src/lobby.cjs');const {Game,NODES}=require('./src/engine.cjs');
 let count=0;const test=(n,fn)=>{fn();count++;console.log('PASS '+n)};
-function fixture(){let time=1000;const l=new Lobby({now:()=>time,random:()=>.01});const users=[0,1,2,3].map(i=>l.user(l.login('양반'+i).token));l.create(users[0]);const r=l.room(users[0]);for(const u of users.slice(1))l.join(u,{id:r.id});return {l,r,users,tick(ms){time+=ms;for(const u of users)u.seen=time;l.tick();},now:()=>time};}
+function fixture(){let time=1000;const l=new Lobby({startDelayMs:0,now:()=>time,random:()=>.01});const users=[0,1,2,3].map(i=>l.user(l.login('양반'+i).token));l.create(users[0]);const r=l.room(users[0]);for(const u of users.slice(1))l.join(u,{id:r.id});return {l,r,users,tick(ms){time+=ms;for(const u of users)u.seen=time;l.tick();},now:()=>time};}
 function ready(f){f.users.forEach(u=>f.l.ready(u,{ready:true}));f.l.start(f.users[0]);return f.r.game;}
 function fresh(){return new Game([0,1,2,3].map(id=>({uid:'u'+id,name:'양반'+id,team:id%2,character:id,ai:true})),()=>.01);}
 function own(g,id,p,buildings=[]){g.s.land[id]={owner:p,buildings:[...buildings],level:Math.max(0,...buildings),boost:false};}

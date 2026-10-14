@@ -2,11 +2,11 @@ const {Lobby}=require('./lobby.cjs'),{Game}=require('./engine.cjs');
 const routes={create:'create',join:'join',quick:'quick',leave:'leave',edit:'edit',ready:'ready',ai:'ai','ai-edit':'aiEdit',kick:'kick',rematch:'rematch',logout:'logout',start:'start',action:'action',session:'session',chat:'chat',emote:'emote'};
 function restore(raw,now,random){const lobby=new Lobby({now,random});if(!raw)return lobby;const data=JSON.parse(raw);if(data.version!==1)throw Error('저장 형식 불일치');lobby.chatMessages=data.chatMessages||[];lobby.chatSeq=data.chatSeq||0;lobby.revision=data.revision;lobby.users=new Map(data.users);lobby.rooms=new Map(data.rooms.map(([id,r])=>[id,{...r,game:r.state?new Game(r.state,random):null}]));for(const r of lobby.rooms.values())delete r.state;return lobby;}
 function serialize(lobby){return JSON.stringify({version:1,revision:lobby.revision,chatMessages:lobby.chatMessages,chatSeq:lobby.chatSeq,users:[...lobby.users],rooms:[...lobby.rooms].map(([id,r])=>{const {game,...fields}=r;return [id,{...fields,state:game?.s||null}];})});}
-function createService({store,now=Date.now,random=Math.random}={}){
+function createService({store,now=Date.now,random=Math.random,startDelayMs=9000}={}){
  return {async execute({route,method,token='',body={},revision=-1}){
   const stopAt=Date.now()+15000;
   for(let attempt=0;attempt<16&&Date.now()<stopAt;attempt++){
-   const raw=await store.read();let lobby=restore(raw,now,random);
+   const raw=await store.read();let lobby=restore(raw,now,random);lobby.startDelayMs=startDelayMs;
    lobby.pruneSessions();
    lobby.tick();const afterTick=serialize(lobby);let result,failure;
    try{

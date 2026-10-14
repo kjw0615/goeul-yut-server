@@ -1,7 +1,7 @@
 const assert=require('node:assert/strict');
 const {Lobby}=require('./src/lobby.cjs');
 const {serialize,restore}=require('./src/service.cjs');
-let time=1000,l=new Lobby({now:()=>time,random:()=>.01});
+let time=1000,l=new Lobby({startDelayMs:0,now:()=>time,random:()=>.01});
 const login=name=>l.user(l.login(name).token);
 const a=login('먼저 온 양반');
 l.chat(a,{text:'접속 이전 메시지'});

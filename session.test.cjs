@@ -1,7 +1,7 @@
 const assert=require('node:assert/strict');
 const {MemoryStore}=require('./src/store.cjs');const {createService,restore}=require('./src/service.cjs');
 (async()=>{
-function fixture(){let time=1000;const store=new MemoryStore(),service=createService({store,now:()=>time,random:()=>.01});return {store,service,advance(ms){time+=ms;},call(route,token='',body){return service.execute({route,token,method:body===undefined?'GET':'POST',body:body||{}});},read:async()=>restore(await store.read(),()=>time,()=>.01)};}
+function fixture(){let time=1000;const store=new MemoryStore(),service=createService({startDelayMs:0,store,now:()=>time,random:()=>.01});return {store,service,advance(ms){time+=ms;},call(route,token='',body){return service.execute({route,token,method:body===undefined?'GET':'POST',body:body||{}});},read:async()=>restore(await store.read(),()=>time,()=>.01)};}
 let f=fixture(),token=(await f.call('login','',{nickname:'휴식 양반'})).token;
 for(let i=0;i<29;i++){f.advance(60000);await f.call('state',token);}f.advance(60000);await assert.rejects(f.call('state',token),e=>e.status===401);assert.equal((await f.read()).users.size,0);console.log('PASS 자동 조회가 계속되어도 실제 조작 없이30분이면 세션 만료');
 f=fixture();token=(await f.call('login','',{nickname:'활동 양반'})).token;for(let i=0;i<40;i++){f.advance(60000);await f.call('session',token,{active:true});await f.call('state',token);}assert.equal((await f.read()).users.size,1);console.log('PASS 실제 조작 활동 보고로 세션 유지');
