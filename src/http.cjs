@@ -12,9 +12,9 @@ function createHandler({getStore,now=Date.now,random=Math.random,startDelayMs=90
    if(req.method==='OPTIONS'){res.writeHead(204);return res.end();}
    if(route==='health'){if(req.method!=='GET')return send(res,405,{error:'GET 요청을 사용해주세요.'});return send(res,200,{game:'goeul-yut',version:14,multiplayer:true,storageConfigured:!!((env.UPSTASH_REDIS_REST_URL||env.KV_REST_API_URL)&&(env.UPSTASH_REDIS_REST_TOKEN||env.KV_REST_API_TOKEN)),runtime:env.VERCEL?'vercel-functions':'local'});}
    if(!url.pathname.startsWith('/api/'))return send(res,404,{error:'게임 API 주소를 사용해주세요.'});
-   const service=createService({store:getStore(),now,random,startDelayMs,presentationMs});
+   const service=createService({store:getStore(),now,random,startDelayMs,presentationMs,adminPassword:env.ADMIN_PASSWORD});
    const body=req.method==='POST'?await readBody(req):{};
-   return send(res,200,await service.execute({route,method:req.method,body,token:String(req.headers.authorization||'').replace(/^Bearer /,''),revision:req.query?.revision??url.searchParams.get('revision')??-1}));
+   return send(res,200,await service.execute({route,method:req.method,body,token:String(req.headers.authorization||'').replace(/^Bearer /,''),adminKey:env.VERCEL?String(req.headers['x-forwarded-for']||req.socket?.remoteAddress||'unknown').split(',')[0].trim():req.socket?.remoteAddress||'local',revision:req.query?.revision??url.searchParams.get('revision')??-1}));
   }catch(error){return send(res,error.status||500,{error:error.status?error.message:'게임 서버에서 문제가 발생했습니다.'});}
  };
 }
