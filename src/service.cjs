@@ -39,4 +39,4 @@ function createService({store,now=Date.now,random=Math.random,startDelayMs=9000,
   throw Object.assign(Error('다른 행동을 처리 중입니다. 잠시 후 다시 선택해주세요.'),{status:409});
  }};
 }
-module.exports={createService,serialize,restore};
+module.exports={createService,serialize,restore,routes};
